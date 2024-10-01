@@ -1,0 +1,51 @@
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <form method="post" action="/login">
+            <input name="name" value="demilv" />
+            <input name ="password" value="Pass123" />
+            <input type="submit" />
+        </form>
+
+        <form method="post" action="/logout">
+            <input type="submit" value="Logout" />
+        </form>
+
+        <h1>API Documentation</h1>
+        <p>Welcome to my API documentation. These are the directions u can use in your browser to check all the data</p>
+        <ul>
+            <li><code>/rooms</code>: Get a list of all rooms.</li>
+            <li><code>/users</code>: Get a list of all users.</li>
+            <li><code>/reviews</code>: Get a list of all reviews.</li>
+            <li><code>/bookings</code>: Get a list of all bookings.</li>
+        </ul>
+        <p>To get a specific item, use one of the previous endpoints followed by a bar and number; for example:</p>
+        <ul>
+            <li><code>/users/1</code>: Get the user with ID 1.</li>
+        </ul>
+        <p>Example links:</p>
+        <p><a href="/users">Get all users</a></p>
+        <p><a href="/users/1">Get user with ID 1</a></p>
+    </div>
+</body>
+</html>
