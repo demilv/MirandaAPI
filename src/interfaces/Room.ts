@@ -1,5 +1,5 @@
 export interface Room {
-    _id: string,
+    _id: number,
     fotoLink: string[],
     number: string,
     floor: number,

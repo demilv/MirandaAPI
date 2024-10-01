@@ -1,62 +1,78 @@
-import { connect, connection } from "mongoose";
-import { RoomModel } from './Schemas/room';
-import { UserModel } from "./Schemas/user";
-import { BookingModel } from "./Schemas/booking";
-import { ReviewModel } from "./Schemas/review";
-import { generateRandomBookings } from './Seeds/booking';
+import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
 import { randomRooms } from './Seeds/room';
+import { generateRandomBookings } from './Seeds/booking';
 import { randomUsers } from './Seeds/user';
 import { randomReviews } from './Seeds/review';
-import checkUser, { hashPassword } from './HashingChecking/HashCheck';
-import dotenv from 'dotenv'
+import { tablas } from './tablas';
+import { hashPassword } from './HashingChecking/HashCheck';
 
-dotenv.config()
+dotenv.config();
 
-export const loginUser = {
-  name: 'demilv',
-  pass: 'Pass123'
+const conexionValues = {
+  host: process.env.MYSQLHOST,
+  user: process.env.MYSQLUSER,
+  password: process.env.MYSQLPASS,
+  database: process.env.MYSQLDB,
 };
 
-export const exampleUser = new UserModel({
-  photo: 'https://randomuser.me/api/portraits/men/1.jpg',
-  name: 'demilv',
-  startDate: new Date('2024-01-15T10:00:00Z'),
-  email: 'demilv@gmail.com',
-  job: 'Software Engineer',
-  phone: '123456789', 
-  status: true,
-  pass: 'Pass123'
-});
 
-export async function initializeDatabase() {
+export async function addExampleUser(conexion: mysql.Connection) {
+  const exampleUser = {
+    photo: 'https://randomuser.me/api/portraits/men/1.jpg',
+    name: 'demilv',
+    startDate: new Date('2024-01-15T10:00:00Z'),
+    email: 'demilv@gmail.com',
+    job: 'Software Engineer',
+    phone: '123456789', 
+    status: true,
+    pass: 'Pass123',
+  };
+
   try {
-    await connect(`mongodb+srv://gonzalocano:${process.env.BASEKEY}@cluster0.tkcwqd3.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`);
+    const hashedPass = await hashPassword(exampleUser.pass);
 
-    await connection.db.dropCollection('rooms');
-    await connection.db.dropCollection('bookings');
-    await connection.db.dropCollection('users');
-    await connection.db.dropCollection('reviews');
+    const query = `
+      INSERT INTO Users (photo, name, startDate, email, job, phone, status, pass) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+    `;
 
-    exampleUser.pass = await hashPassword(exampleUser.pass);
-    await exampleUser.save();
+    await conexion.execute(query, [
+      exampleUser.photo,
+      exampleUser.name,
+      exampleUser.startDate,
+      exampleUser.email,
+      exampleUser.job,
+      exampleUser.phone,
+      exampleUser.status,
+      hashedPass, 
+    ]);
 
-    const authenticated = await checkUser(loginUser.name, loginUser.pass);
-    if (!authenticated) {
-      console.log('Acceso denegado');
-      return;
-    }
-
-    await UserModel.insertMany(randomUsers);
-    await RoomModel.insertMany(randomRooms);
-    const randomBookings = await generateRandomBookings(10);
-    await BookingModel.insertMany(randomBookings);
-    await ReviewModel.insertMany(randomReviews);
-
-    console.log('Datos insertados correctamente');
+    console.log('demilv insertado');
   } catch (err) {
-    console.error('Error:', err);
+    console.error('No se puso insertar a demilv:', err);
   }
 }
 
+
+export async function initializeDatabase() {
+  const conexion= await mysql.createConnection(conexionValues);
+
+  try {
+  
+    await tablas(conexion);
+    await addExampleUser(conexion)
+    await randomRooms(conexion, 10);
+    await randomUsers(conexion, 10);
+    await randomReviews(conexion, 10); 
+    await generateRandomBookings(conexion, 10);
+
+    console.log('Datos insertados correctamente');
+  } catch (err) {
+    console.error('Error al inicializar la base de datos:', err);
+  } finally {
+    await conexion.end();
+  }
+}
 
 initializeDatabase().catch(err => console.log(err));

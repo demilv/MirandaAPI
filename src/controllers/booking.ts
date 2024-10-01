@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { Booking as BookingService } from '../services/booking';
 import { Booking as BookingInterface } from '../interfaces/Booking';
-import { Types } from 'mongoose';
+import { Connection } from 'mysql2/promise';
 
-const fetchAllBookings = async () => {
+const fetchAllBookings = async (db: Connection) => {
     try {
-        const bookings = await BookingService.fetchAll();
-        if (!bookings) {
+        const bookings = await BookingService.fetchAll(db);
+        if (!bookings || bookings.length === 0) {
             throw new Error('Bookings not found');
         }
         return bookings;
@@ -15,19 +15,19 @@ const fetchAllBookings = async () => {
     }
 };
 
-export const getAllBookings = async (_req: Request, res: Response, next: NextFunction) => {
+export const getAllBookings = async (res: Response, next: NextFunction, db: Connection) => {
     try {
-        const bookings = await fetchAllBookings();
-        return res.json( bookings );
+        const bookings = await fetchAllBookings(db);
+        return res.json(bookings);
     } catch (e) {
         return next(e);
     }
 };
 
-export const getOneBooking = async (req: Request, res: Response, next: NextFunction) => {
+export const getOneBooking = async (req: Request, res: Response, next: NextFunction, db: Connection) => {
     try {
-        const bookings = await fetchAllBookings();        
-        const bookingIndex = parseInt(req.params.id, 10)-1;
+        const bookings = await fetchAllBookings(db);
+        const bookingIndex = parseInt(req.params.id, 10);
 
         if (isNaN(bookingIndex) || bookingIndex < 0 || bookingIndex >= bookings.length) {
             return res.status(404).json({ message: 'Booking not found' });
@@ -40,7 +40,7 @@ export const getOneBooking = async (req: Request, res: Response, next: NextFunct
     }
 };
 
-export const setNewBooking = async (req: Request, res: Response, next: NextFunction) => {
+export const setNewBooking = async (req: Request, res: Response, next: NextFunction, db: Connection) => {
     try {
         const newBooking: BookingInterface = req.body;
         if (!newBooking.fotoLink || !newBooking.guest || 
@@ -48,38 +48,32 @@ export const setNewBooking = async (req: Request, res: Response, next: NextFunct
             !newBooking.specialRequest || !newBooking.status) {
             return res.status(400).json({ message: 'Missing required fields' });
         }
-        
-        const savedBooking = await BookingService.save(newBooking);
-        console.log(savedBooking)
+        const savedBooking = await BookingService.save(db, newBooking);
         return res.status(201).json({ booking: savedBooking });
     } catch (e) {
         return next(e);
     }
 };
 
-export const updateBooking = async (req: Request, res: Response, next: NextFunction) => {
+export const updateBooking = async (req: Request, res: Response, next: NextFunction, db: Connection) => {
     try {
-        const { id } = req.params;  
-        const objectId = new Types.ObjectId(id);
-
+        const bookingIndex = parseInt(req.params.id, 10);
         const updatedBookingData: Partial<BookingInterface> = req.body;
-        const updatedBooking = await BookingService.Edit(objectId, updatedBookingData);
+        const updatedBooking = await BookingService.Edit(db, bookingIndex, updatedBookingData);
 
         if (!updatedBooking) {
             return res.status(404).json({ message: 'Booking not found' });
         }
-        return res.json({ user: updatedBooking });
+        return res.json({ booking: updatedBooking });
     } catch (e) {
         return next(e);
     }
 };
 
-export const deleteBooking = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteBooking = async (req: Request, res: Response, next: NextFunction, db: Connection) => {
     try {
-        const { id } = req.params;  
-        const objectId = new Types.ObjectId(id);
-        
-        const deletedBooking = await BookingService.Delete(objectId);  
+        const bookingIndex = parseInt(req.params.id, 10);
+        const deletedBooking = await BookingService.Delete(db, bookingIndex);
         
         if (!deletedBooking) {
             return res.status(404).json({ message: 'Booking not found' });

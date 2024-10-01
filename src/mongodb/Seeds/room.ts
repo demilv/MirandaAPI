@@ -1,21 +1,31 @@
-import { RoomModel } from "../Schemas/room";
 import { faker } from '@faker-js/faker';
+import { Connection } from 'mysql2/promise';
 
-const createRandomRoom = () => {
+export const randomRooms = async (conexion: Connection, numRooms: number) => {
+  try {
+    const rooms = [];
 
-const amenitiesOptions = ["AC", "Shower", "Double Bed", "Towel", "Bathup", "Coffee Set", "LED TV", "Wifi"];
-const amenities = faker.helpers.arrayElements(amenitiesOptions, faker.datatype.number({ min: 0, max: amenitiesOptions.length }));
+    for (let i = 0; i < numRooms; i++) {
+      const newRoom = [
+        faker.number.int({ min: 1, max: 100 }).toString(),
+        faker.number.int({ min: 1, max: 10 }),
+        faker.helpers.arrayElement(["Single Bed", "Double Bed", "Double Superior", "Suite"]),
+        faker.number.int({ min: 150, max: 200 }),
+        faker.datatype.boolean(),
+        faker.number.int({ min: 100, max: 140 })
+      ];
+      rooms.push(newRoom);
+    }
 
-return new RoomModel({
-    fotoLink: [faker.image.url()],
-    number: faker.number.int({ min: 1, max: 100 }).toString(),
-    floor: faker.number.int({ min: 1, max: 10 }),
-    bedType: faker.helpers.arrayElement(["Single Bed", "Double Bed", "Double Superior", "Suite"]),
-    amenities: amenities,
-    price: faker.number.int({ min: 150, max: 200 }),
-    status: faker.datatype.boolean(),
-    offer: faker.number.int({ min: 100, max: 140 })
-  });
+    const insertQuery = `
+      INSERT INTO Rooms (number, floor, bedType, price, status, offer) 
+      VALUES ?;
+    `;
+    
+    await conexion.query(insertQuery, [rooms]);
+
+    console.log(`nuevas habitaciones finalizadas`);
+  } catch (err) {
+    console.error('Hubo un error generando habitaciones:', err);
+  }
 };
-
-export const randomRooms = Array.from({ length: 10 }, createRandomRoom);

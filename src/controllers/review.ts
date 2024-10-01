@@ -1,13 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { Review as ReviewService } from '../services/review';
 import { Review as ReviewInterface } from '../interfaces/Review';
-import { Types } from 'mongoose';
+import { Connection } from 'mysql2/promise';
 
-
-const fetchAllReviews = async () => {
+const fetchAllReviews = async (db: Connection) => {
     try {
-        const reviews = await ReviewService.fetchAll();
-        if (!reviews) {
+        const reviews = await ReviewService.fetchAll(db);
+        if (!reviews || reviews.length === 0) {
             throw new Error('Reviews not found');
         }
         return reviews;
@@ -16,19 +15,19 @@ const fetchAllReviews = async () => {
     }
 };
 
-export const getAllReviews = async (_req: Request, res: Response, next: NextFunction) => {
+export const getAllReviews = async (res: Response, next: NextFunction, db: Connection) => {
     try {
-        const reviews = await fetchAllReviews();
-        return res.json( reviews );
+        const reviews = await fetchAllReviews(db);
+        return res.json(reviews);
     } catch (e) {
         return next(e);
     }
 };
 
-export const getOneReview = async (req: Request, res: Response, next: NextFunction) => {
+export const getOneReview = async (req: Request, res: Response, next: NextFunction, db: Connection) => {
     try {
-        const reviews = await fetchAllReviews();        
-        const reviewIndex = parseInt(req.params.id, 10)-1;
+        const reviews = await fetchAllReviews(db);
+        const reviewIndex = parseInt(req.params.id, 10);
 
         if (isNaN(reviewIndex) || reviewIndex < 0 || reviewIndex >= reviews.length) {
             return res.status(404).json({ message: 'Review not found' });
@@ -41,7 +40,7 @@ export const getOneReview = async (req: Request, res: Response, next: NextFuncti
     }
 };
 
-export const setNewReview = async (req: Request, res: Response, next: NextFunction) => {
+export const setNewReview = async (req: Request, res: Response, next: NextFunction, db: Connection) => {
     try {
         const newReview: ReviewInterface = req.body;
         if (!newReview.date || !newReview.hora || 
@@ -50,37 +49,32 @@ export const setNewReview = async (req: Request, res: Response, next: NextFuncti
             newReview.status === undefined || !newReview.phone) {
             return res.status(400).json({ message: 'Missing required fields' });
         }
-        const savedReview = await ReviewService.save(newReview);
-        console.log(savedReview)
+        const savedReview = await ReviewService.save(db, newReview);
         return res.status(201).json({ review: savedReview });
     } catch (e) {
         return next(e);
     }
 };
 
-export const updateReview = async (req: Request, res: Response, next: NextFunction) => {
+export const updateReview = async (req: Request, res: Response, next: NextFunction, db: Connection) => {
     try {
-        const { id } = req.params;  
-        const objectId = new Types.ObjectId(id);
-
+        const reviewIndex = parseInt(req.params.id, 10);
         const updatedReviewData: Partial<ReviewInterface> = req.body;
-        const updatedReview = await ReviewService.Edit(objectId, updatedReviewData);
+        const updatedReview = await ReviewService.Edit(db, reviewIndex, updatedReviewData);
 
         if (!updatedReview) {
             return res.status(404).json({ message: 'Review not found' });
         }
-        return res.json({ user: updatedReview });
+        return res.json({ review: updatedReview });
     } catch (e) {
         return next(e);
     }
 };
 
-export const deleteReview = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteReview = async (req: Request, res: Response, next: NextFunction, db: Connection) => {
     try {
-        const { id } = req.params;  
-        const objectId = new Types.ObjectId(id);
-        
-        const deletedReview = await ReviewService.Delete(objectId);  
+        const reviewIndex = parseInt(req.params.id, 10);
+        const deletedReview = await ReviewService.Delete(db, reviewIndex);
         
         if (!deletedReview) {
             return res.status(404).json({ message: 'Review not found' });

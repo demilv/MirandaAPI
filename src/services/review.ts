@@ -1,56 +1,66 @@
-import { ReviewModel } from '../mongodb/Schemas/review';
-import { APIError } from '../errors/APIerror';
+import { Connection } from 'mysql2/promise';
 import { Review as ReviewInterface } from '../interfaces/Review';
-import { Types } from 'mongoose';
-
+import { APIError } from '../errors/APIerror';
+import { RowDataPacket } from 'mysql2/promise';
+import { ResultSetHeader } from 'mysql2/promise';
 
 export class Review {
-
-    static async fetchAll(): Promise<ReviewInterface[]> {
+    static async fetchAll(db: Connection): Promise<ReviewInterface[]> {
         try {
-            const reviews = await ReviewModel.find({}).exec();
-            return reviews as ReviewInterface[];
+            const [reviews] = await db.query<RowDataPacket[]>('SELECT * FROM Reviews');
+            return reviews as ReviewInterface[]
         } catch (error) {
             throw new APIError(`Reviews not found: `, 404);
         }
     }
 
-    static async getReview(id: string){    
-        const objectId = new Types.ObjectId(id); 
-
-        const review = await ReviewModel.findById(objectId).exec();        
-        if (!review){
-            throw new APIError(`Review not found: ${id}`, 404);            
-        }
-        return review;
-    }
-    
-    static async save(newReview: ReviewInterface): Promise<ReviewInterface> {
+    static async getReview(db: Connection, id: number): Promise<ReviewInterface> {
         try {
-            const review = new ReviewModel(newReview);
-            await review.save();
-            return review as ReviewInterface;
+            const [review] = await db.query<RowDataPacket[]>('SELECT * FROM Reviews WHERE _id = ?', [id]);
+            if (!review || review.length === 0) {
+                throw new APIError(`Review not found: ${id}`, 404);
+            }
+            return review[0] as ReviewInterface;
         } catch (error) {
-            throw new APIError(`Reviews not saved: `, 404);
+            throw new APIError(`Review not found: `, 404);
         }
     }
 
-    static async Edit(id: Types.ObjectId, updatedReviewData: Partial<ReviewInterface>): Promise<ReviewInterface | null> {
+    static async save(db: Connection, newReview: ReviewInterface): Promise<ReviewInterface> {
         try {
-            const updatedReview = await ReviewModel.findByIdAndUpdate(id, updatedReviewData, { new: true }).exec();
-            return updatedReview as ReviewInterface | null;
+            const { date, hora, customerName, email, stars, review, status, phone } = newReview;
+            const [result] = await db.query<ResultSetHeader>('INSERT INTO Reviews (date, hora, customerName, email, stars, review, status, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', 
+            [date, hora, customerName, email, stars, review, status, phone]);
+            
+            return { ...newReview, _id: result.insertId.toString() };
         } catch (error) {
-            throw new APIError(`Reviews not edited: ${id}` , 404);
+            throw new APIError(`Review not saved: `, 404);
         }
     }
 
-    static async Delete(id: Types.ObjectId): Promise<ReviewInterface | null> {
+    static async Edit(db: Connection, id: number, updatedReviewData: Partial<ReviewInterface>): Promise<ReviewInterface | null> {
         try {
-            const deletedReview = await ReviewModel.findByIdAndDelete(id).exec();
-            return deletedReview as ReviewInterface | null;
+            const [result] = await db.query<ResultSetHeader>('UPDATE Reviews SET ? WHERE _id = ?', [updatedReviewData, id]);
+            if (result.affectedRows === 0) {
+                throw new APIError(`Review not found: ${id}`, 404);
+            }
+            return this.getReview(db, id);
         } catch (error) {
-            throw new APIError(`Reviews not deleted: ${id}` , 404);
+            throw new APIError(`Review not edited: `, 404);
         }
-    
+    }
+
+    static async Delete(db: Connection, id: number): Promise<ReviewInterface | null> {
+        try {
+            const review = await this.getReview(db, id);
+            const [result] = await db.query<ResultSetHeader>('DELETE FROM Reviews WHERE _id = ?', [id]);
+            if (result.affectedRows === 0) {
+                throw new APIError(`Review not found: ${id}`, 404);
+            }
+            return review;
+        } catch (error) {
+            throw new APIError(`Review not deleted: `, 404);
+        }
     }
 }
+

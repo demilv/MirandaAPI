@@ -1,4 +1,5 @@
-import { UserModel } from "../Schemas/user";
+import { Connection, RowDataPacket } from 'mysql2/promise';
+
 const bcrypt = require('bcryptjs');
 const saltRounds = 10;
 
@@ -12,18 +13,24 @@ export async function hashPassword(password: string): Promise<string> {
     }
   }
   
-  export default async function checkUser(name: string, password: string): Promise<boolean> {
+  export default async function checkUser(connection: Connection, name: string, password: string): Promise<boolean> {
     try {
-      const user = await UserModel.findOne({ name:name }).exec();
-      if (!user) {
+      const [rows]: [RowDataPacket[], any] = await connection.query('SELECT pass FROM Users WHERE name = ?', [name]);
+      
+      console.log(name)
+      console.log(rows)
+
+      if (!Array.isArray(rows) || rows.length === 0) {
         console.log('Usuario no encontrado');
         return false;
       }
 
+      const user = rows[0];
+
       const matchPass = await bcrypt.compare(password, user.pass);
-      
+
       if (matchPass) {
-        console.log('Autenticación exitosa noice');
+        console.log('Autenticación exitosa');
         return true;
       } else {
         console.log('Contraseña incorrecta');
@@ -33,4 +40,4 @@ export async function hashPassword(password: string): Promise<string> {
       console.error('Error al verificar las credenciales:', err);
       return false;
     }
-  }
+}
