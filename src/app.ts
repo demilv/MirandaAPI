@@ -14,7 +14,7 @@ import serverless from 'serverless-http';
 import mongoose from 'mongoose';
 
 dotenv.config();
-/////
+//////
 
 export const app = express();
 app.use(cors())
