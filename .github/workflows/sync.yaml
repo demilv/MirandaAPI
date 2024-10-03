@@ -23,9 +23,6 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Install Serverless Framework globally
-        run: npm install -g serverless
-
       - name: Deploy Serverless Backend
         run: serverless deploy --stage production
         env:
