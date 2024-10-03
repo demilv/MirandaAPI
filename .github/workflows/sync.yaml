@@ -14,14 +14,20 @@ jobs:
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
-           with:
+        with:
           node-version: '18.x'
       
       - name: Install dependencies
         run: npm install
 
+      ##- name: Build project
+      ##  run: npm run build
+
+      ##- name: Install Serverless Framework globally
+      ##  run: npm install -g serverless
+
       - name: Deploy Serverless Backend
-        run: npx serverless deploy --stage production
+        run: serverless deploy --stage production
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
