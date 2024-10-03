@@ -16,7 +16,7 @@ jobs:
       uses: actions/setup-node@v2
       with:
         node-version: '18.x'
-      
+
     - name: Install dependencies
       run: npm install
 
@@ -34,6 +34,6 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: ${{ secrets.AWS_REGION }}
         AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-        PORT: ${{ secrets.PORT }}            
-        MYKEY: ${{ secrets.MYKEY }}           
-        BASEKEY: ${{ secrets.BASEKEY }}   
+        PORT: ${{ secrets.PORT }}
+        MYKEY: ${{ secrets.MYKEY }}
+        BASEKEY: ${{ secrets.BASEKEY }}
